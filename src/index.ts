@@ -25,11 +25,16 @@ app.get("/", (req, res) => {
 
 //---------------------------------http-----------------------------------------
 let fs = require('fs');
-let config = require('./config.json');
+// let config = require('./config.json');
+// // @ts-ignore
+// global.__keyOption = {
+//   cert: fs.readFileSync(config['certificate']),
+//   key: fs.readFileSync(config['privateKey'])
+// };
 // @ts-ignore
 global.__keyOption = {
-  cert: fs.readFileSync(config['certificate']),
-  key: fs.readFileSync(config['privateKey'])
+  cert: fs.readFileSync(process.env.crt),
+  key: fs.readFileSync(process.env.key)
 };
 // @ts-ignore
 const server = process.env.ENABLE_SSL ? https.createServer(global.__keyOption, app) : http.createServer(app);
