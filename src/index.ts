@@ -1,6 +1,7 @@
 import debug from "debug";
 import express from "express";
 import http from "http";
+import https from "https";
 import socketIO from "socket.io";
 
 const serverDebug = debug("server");
@@ -10,19 +11,28 @@ const socketDebug = debug("socket");
 require("dotenv").config(
   process.env.NODE_ENV !== "development"
     ? { path: ".env.production" }
-    : { path: ".env.development" },
+    : { path: ".env.development" }
 );
 
 const app = express();
-const port = process.env.PORT || 80; // default port to listen
+const port = process.env.ENABLE_SSL ? process.env.PORT_SSL : process.env.PORT || 80; // default port to listen
 
 app.use(express.static("public"));
 
 app.get("/", (req, res) => {
-  res.send("Excalidraw collaboration server is up :)");
+  res.send("TangoDraw collaboration server is up :)");
 });
 
-const server = http.createServer(app);
+//---------------------------------http-----------------------------------------
+let fs = require('fs');
+let config = require('./config.json');
+// @ts-ignore
+global.__keyOption = {
+  cert: fs.readFileSync(config['certificate']),
+  key: fs.readFileSync(config['privateKey'])
+};
+// @ts-ignore
+const server = process.env.ENABLE_SSL ? https.createServer(global.__keyOption, app) : http.createServer(app);
 
 server.listen(port, () => {
   serverDebug(`listening on port: ${port}`);
@@ -34,11 +44,11 @@ const io = socketIO(server, {
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
       "Access-Control-Allow-Origin":
         (req.header && req.header.origin) || "https://excalidraw.com",
-      "Access-Control-Allow-Credentials": true,
+      "Access-Control-Allow-Credentials": true
     };
     res.writeHead(200, headers);
     res.end();
-  },
+  }
 });
 
 io.on("connection", (socket) => {
@@ -54,7 +64,7 @@ io.on("connection", (socket) => {
     }
     io.in(roomID).emit(
       "room-user-change",
-      Object.keys(io.sockets.adapter.rooms[roomID].sockets),
+      Object.keys(io.sockets.adapter.rooms[roomID].sockets)
     );
   });
 
@@ -63,7 +73,7 @@ io.on("connection", (socket) => {
     (roomID: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
       socketDebug(`${socket.id} sends update to ${roomID}`);
       socket.broadcast.to(roomID).emit("client-broadcast", encryptedData, iv);
-    },
+    }
   );
 
   socket.on(
@@ -73,14 +83,14 @@ io.on("connection", (socket) => {
       socket.volatile.broadcast
         .to(roomID)
         .emit("client-broadcast", encryptedData, iv);
-    },
+    }
   );
 
   socket.on("disconnecting", () => {
     const rooms = io.sockets.adapter.rooms;
     for (const roomID in socket.rooms) {
       const clients = Object.keys(rooms[roomID].sockets).filter(
-        (id) => id !== socket.id,
+        (id) => id !== socket.id
       );
       if (clients.length > 0) {
         socket.broadcast.to(roomID).emit("room-user-change", clients);
