@@ -33,8 +33,8 @@ let fs = require('fs');
 // };
 // @ts-ignore
 global.__keyOption = {
-  cert: fs.readFileSync(process.env.crt),
-  key: fs.readFileSync(process.env.key)
+  cert: fs.readFileSync(process.env.CRT),
+  key: fs.readFileSync(process.env.KEY)
 };
 // @ts-ignore
 const server = process.env.ENABLE_SSL ? https.createServer(global.__keyOption, app) : http.createServer(app);
